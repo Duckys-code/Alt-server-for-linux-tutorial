@@ -4,7 +4,7 @@ echo "=== AltServer Linux Installer ==="
 echo "Supported: Fedora / Debian / Ubuntu"
 echo
 
-# Detect distro
+# --- Step 0: Detect distro ---
 if [ -f /etc/fedora-release ]; then
     DISTRO="fedora"
 elif [ -f /etc/debian_version ]; then
@@ -14,31 +14,50 @@ else
     exit 1
 fi
 
-# Step 1: Create sideloading dir
+# --- Step 1: Create sideloading dir ---
 mkdir -p ~/Desktop/Sideloading
 cd ~/Desktop/Sideloading || exit
 
-# Step 2: Install dependencies
+# --- Step 2: Install dependencies ---
 echo "Installing dependencies..."
 if [ "$DISTRO" = "fedora" ]; then
-    sudo dnf install -y python3 python3-pip git usbmuxd libimobiledevice ifuse fuse wget unzip curl
+    sudo dnf install -y python3 python3-venv python3-pip git usbmuxd libimobiledevice ifuse fuse wget unzip curl
 else
     sudo apt update
-    sudo apt install -y python3 python3-pip git usbmuxd libimobiledevice6 libimobiledevice-utils ifuse wget unzip curl
+    sudo apt install -y python3 python3-venv python3-pip git usbmuxd libimobiledevice6 libimobiledevice-utils ifuse wget unzip curl
 fi
 
-# Step 3: Install pymobiledevice3
+# --- Step 3: Setup virtual environment for Python packages ---
+VENV_DIR=~/AltServer-venv
+if [ ! -d "$VENV_DIR" ]; then
+    echo "Creating Python virtual environment..."
+    python3 -m venv "$VENV_DIR"
+fi
+
+# Activate virtual environment
+source "$VENV_DIR/bin/activate"
+
+# Upgrade pip in the venv and install pymobiledevice3
+pip install --upgrade pip
 pip install -U pymobiledevice3
 
-# Step 4: Clone AltServer-Linux
+# --- Step 4: Clone AltServer-Linux ---
 if [ ! -d "AltServer-Linux" ]; then
     git clone https://github.com/NyaMisty/AltServer-Linux.git
 fi
+
 cd AltServer-Linux || exit
-chmod +x AltServer
+
+# Make sure the Alt executable exists
+if [ ! -f "./Alt" ]; then
+    echo "Error: Alt executable not found in AltServer-Linux. Exiting."
+    exit 1
+fi
+
+chmod +x ./Alt
 cd ..
 
-# Step 5: UUID detection
+# --- Step 5: UUID detection ---
 echo
 read -rp "Do you know your device UUID? (y/n): " uuid_known
 if [ "$uuid_known" = "y" ]; then
@@ -53,11 +72,11 @@ else
     echo "Detected UUID: $DEVICE_UUID"
 fi
 
-# Step 6: Apple credentials
+# --- Step 6: Apple credentials ---
 read -rp "Enter your Apple ID email: " APPLE_ID
 read -rp "Enter your app-specific password: " APP_PASS
 
-# Step 7: Choose Anisette server
+# --- Step 7: Choose Anisette server ---
 echo
 echo "Select Anisette Server:"
 echo "1) https://ani.sidestore.io"
@@ -76,15 +95,26 @@ case $SERVER_CHOICE in
     *) echo "Invalid choice, using default (sidestore.io)"; SERVER="https://ani.sidestore.io" ;;
 esac
 
-# Step 8: DNS Fix
-echo "Applying DNS fix..."
-echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
+# --- Step 8: Optional DNS fix (commented out by default) ---
+# echo "Applying DNS fix..."
+# sudo resolvectl dns $(ip route get 1.1.1.1 | awk '{print $5; exit}') 8.8.8.8
 
-# Step 9: Get IPA path
-read -rp "Enter the path to your .ipa file: " IPA_PATH
+# --- Step 9: Get IPA path ---
+while true; do
+    read -rp "Enter the full path to your .ipa file: " IPA_PATH
+    if [ -f "$IPA_PATH" ]; then
+        break
+    else
+        echo "File not found. Please enter a valid path."
+    fi
+done
 
-# Step 10: Run sideload command
+# --- Step 10: Run sideload command ---
 cd AltServer-Linux || exit
+
 echo
 echo "Sideloading app..."
-ALTSERVER_ANISETTE_SERVER="$SERVER" ./Alt -u "$DEVICE_UUID" -a "$APPLE_ID" -p "$APP_PASS" "$IPA_PATH"
+ALTSERVER_ANISETTE_SERVER="$SERVER" "$VENV_DIR/bin/python3" ./Alt -u "$DEVICE_UUID" -a "$APPLE_ID" -p "$APP_PASS" "$IPA_PATH"
+
+echo
+echo "Done! Check for any errors above."

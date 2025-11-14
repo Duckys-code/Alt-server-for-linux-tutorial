@@ -82,7 +82,7 @@ echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf > /dev/null
 
 
 # === Automated iOS Sideloading Setup for Linux ===
-# This uses Alt-Store-Linux.sh to install everything automatically.
+# This uses Alt-Store-Linux.sh to install everything automatically. SCRIPT IS BROKEN TEMP I DONT HAVE TIME TO FIX IT RIGHT NOW PLEASE USE METHOD 1!
 
 # =====================================================
 # 1. Download the installer

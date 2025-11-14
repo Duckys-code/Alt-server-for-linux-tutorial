@@ -24,7 +24,7 @@ if [ "$DISTRO" = "fedora" ]; then
     sudo dnf install -y python3 python3-pip git usbmuxd libimobiledevice ifuse fuse wget unzip curl
 else
     sudo apt update
-    sudo apt install -y python3 python3-pip git usbmuxd libimobiledevice6 ifuse wget unzip curl
+    sudo apt install -y python3 python3-pip git usbmuxd libimobiledevice6 libimobiledevice-utils ifuse wget unzip curl
 fi
 
 # Step 3: Install pymobiledevice3
@@ -46,6 +46,10 @@ if [ "$uuid_known" = "y" ]; then
 else
     echo "Detecting UUID..."
     DEVICE_UUID=$(idevice_id -l | head -n 1)
+    if [ -z "$DEVICE_UUID" ]; then
+        echo "Could not detect device UUID. Make sure your iPhone is connected, unlocked, and trusted."
+        exit 1
+    fi
     echo "Detected UUID: $DEVICE_UUID"
 fi
 
